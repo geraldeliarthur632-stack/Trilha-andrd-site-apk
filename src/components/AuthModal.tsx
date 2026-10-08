@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, GradeLevel, AppLanguage } from '../types';
 import { GRADE_LABELS } from '../data/curriculumData';
-import { FirebaseService } from '../services/database/firebaseService';
+import { FirebaseService, isCapacitorOrNativeApp } from '../services/database/firebaseService';
 import { soundEffects } from '../services/soundEffects';
 import { languageService } from '../services/languageService';
 import {
@@ -58,7 +58,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialNotice,
   initialLanguage,
 }) => {
-  const [activeTab, setActiveTab] = useState<AuthTab>('google');
+  const isCapacitor = isCapacitorOrNativeApp();
+  const [activeTab, setActiveTab] = useState<AuthTab>(() => {
+    if (isCapacitorOrNativeApp()) {
+      return user.email ? 'email' : 'guest';
+    }
+    return user.email ? 'email' : 'google';
+  });
   const [emailSubView, setEmailSubView] = useState<EmailSubView>(initialSubView);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -82,7 +88,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setErrorMessage(null);
       setSuccessMessage(initialNotice || null);
       setEmailSubView(initialSubView || 'login');
-      setActiveTab(user.email ? 'email' : 'google');
+      if (isCapacitorOrNativeApp()) {
+        setActiveTab(user.email ? 'email' : 'guest');
+      } else {
+        setActiveTab(user.email ? 'email' : 'google');
+      }
       setShowGoogleFallback(false);
       setPassword('');
       setConfirmPassword('');
@@ -99,7 +109,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setDisplayName(user.name);
       }
     }
-  }, [isOpen, initialNotice, initialSubView]);
+  }, [isOpen, initialNotice, initialSubView, user.email]);
 
   if (!isOpen) return null;
 
@@ -149,7 +159,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         try {
           localStorage.setItem('estudahud_user_profile_v3', JSON.stringify({ ...user, ...updatedProfile }));
         } catch {}
-        await FirebaseService.syncProgress(firebaseUser.uid, updatedProfile);
+
+        // Sincroniza em segundo plano sem travar o fechamento da tela
+        if (firebaseUser.uid && !firebaseUser.uid.startsWith('guest_')) {
+          FirebaseService.syncProgress(firebaseUser.uid, updatedProfile).catch((err) => {
+            console.warn('Aviso sync segundo plano:', err);
+          });
+        }
       } else {
         // Nova conta ou cadastro explícito: salva exatamente os dados VERDADEIROS informados pelo usuário
         const resolvedName = registrationData?.name || displayName.trim() || firebaseUser.displayName || user.name || 'Estudante';
@@ -180,7 +196,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         try {
           localStorage.setItem('estudahud_user_profile_v3', JSON.stringify({ ...user, ...realProfile }));
         } catch {}
-        await FirebaseService.syncProgress(firebaseUser.uid, realProfile);
+
+        // Sincroniza em segundo plano sem travar o fechamento da tela
+        if (firebaseUser.uid && !firebaseUser.uid.startsWith('guest_')) {
+          FirebaseService.syncProgress(firebaseUser.uid, realProfile).catch((err) => {
+            console.warn('Aviso sync segundo plano:', err);
+          });
+        }
       }
 
       soundEffects.playVictoryFanfare();
@@ -189,7 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setTimeout(() => {
         onClose();
         onLoginSuccess?.();
-      }, 1000);
+      }, 500);
     } catch (err: any) {
       console.warn('Erro pós-login sync:', err);
       onUpdateUser({ userId: firebaseUser.uid, email: firebaseUser.email || undefined });
@@ -197,7 +219,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setTimeout(() => {
         onClose();
         onLoginSuccess?.();
-      }, 1000);
+      }, 500);
     }
   };
 
@@ -1300,23 +1322,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
 
                 {/* Dica para APK & Fallback */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-left">
-                  <div className="flex items-center gap-1.5 text-slate-700 text-[11px] font-bold">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>Dica para Aplicativo Android / APK</span>
+                <div className={`p-3 rounded-xl space-y-2 text-left border ${
+                  isCapacitor
+                    ? 'bg-amber-50/80 border-amber-200 text-amber-950'
+                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-[11px] font-black">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span>{isCapacitor ? 'Modo Aplicativo Android (APK Ativo)' : 'Dica para Aplicativo Android / APK'}</span>
+                    </div>
+                    {isCapacitor && (
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                        APK Detectado
+                      </span>
+                    )}
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-snug">
-                    Se o Google solicitar navegador externo ou bloquear a janela no aplicativo, use a aba <strong>Estudante</strong> para acessar instantaneamente sem senha ou a aba <strong>Usuário/E-mail</strong>!
+                  <p className="text-[11px] leading-snug text-slate-600">
+                    {isCapacitor
+                      ? 'No APK, para evitar bloqueios ou tela branca do navegador interno do Google, use a aba Estudante (acesso com 1 toque) ou Usuário/E-mail.'
+                      : 'Se o Google solicitar navegador externo ou bloquear a janela no aplicativo, use a aba Estudante para acessar instantaneamente sem senha ou a aba Usuário/E-mail!'}
                   </p>
-                  {showGoogleFallback && (
-                    <button
-                      type="button"
-                      onClick={handleEnterGuestMode}
-                      className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <UserCheck className="w-3.5 h-3.5" />
-                      <span>Continuar com Perfil de Estudante Agora</span>
-                    </button>
+                  {(isCapacitor || showGoogleFallback) && (
+                    <div className="space-y-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleEnterGuestMode}
+                        className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Entrar com Perfil de Estudante Agora (1 Toque)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundEffects.playClick();
+                          setActiveTab('email');
+                          setEmailSubView('login');
+                          setErrorMessage(null);
+                        }}
+                        className="w-full py-2 px-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-extrabold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Entrar com Usuário ou E-mail</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

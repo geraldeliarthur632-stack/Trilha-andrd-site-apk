@@ -3,7 +3,7 @@ import { GradeLevel, SubjectId, UserProfile, AppLanguage, APP_LANGUAGES } from '
 import { GRADE_LABELS, CONFIGURABLE_SPECIFIC_SUBJECTS } from '../data/curriculumData';
 import { soundEffects } from '../services/soundEffects';
 import { generateUniqueNames } from '../utils/nameGenerator';
-import { FirebaseService } from '../services/database/firebaseService';
+import { FirebaseService, isCapacitorOrNativeApp } from '../services/database/firebaseService';
 import { languageService } from '../services/languageService';
 import {
   Sparkles,
@@ -158,7 +158,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         totalCorrectAnswers: cloudData?.totalCorrectAnswers || 0,
       };
 
-      await FirebaseService.syncProgress(firebaseUser.uid, profilePayload);
+      // Sincronização em segundo plano no Firestore
+      FirebaseService.syncProgress(firebaseUser.uid, profilePayload).catch((syncErr) => {
+        console.warn('Aviso sync segundo plano onboarding:', syncErr);
+      });
 
       soundEffects.playVictoryFanfare();
       setSuccess('Conectado com o Google com sucesso!');
@@ -171,14 +174,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         setTimeout(() => {
           setLoading(false);
           setStep(2);
-        }, 800);
+        }, 500);
       } else {
         setTimeout(() => {
           setLoading(false);
           if (onSaveProfile) onSaveProfile(profilePayload);
           if (onComplete) onComplete();
           if (onClose) onClose();
-        }, 900);
+        }, 500);
       }
     } catch (err: any) {
       setLoading(false);
@@ -406,14 +409,30 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   <span className="flex-1 leading-relaxed">{error}</span>
                 </div>
                 {showGoogleFallback && (
-                  <button
-                    type="button"
-                    onClick={handleConfirmGuest}
-                    className="w-full py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <span>Continuar com Perfil de Estudante (Sem Google)</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="space-y-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleConfirmGuest}
+                      className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>Continuar com Perfil de Estudante Agora (Sem Google)</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    {onOpenAuth && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          soundEffects.playClick();
+                          onOpenAuth();
+                        }}
+                        className="w-full py-2 px-3 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Entrar com Usuário ou E-mail</span>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -602,6 +621,22 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </span>
               </div>
 
+              {/* Botão Entrar com E-mail ou Usuário (Prioritário no APK Android para máxima confiabilidade) */}
+              {onOpenAuth && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundEffects.playClick();
+                    onOpenAuth();
+                  }}
+                  disabled={loading}
+                  className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
+                >
+                  <Mail className="w-4 h-4 text-white shrink-0" />
+                  <span>Entrar com Usuário ou E-mail</span>
+                </button>
+              )}
+
               {/* Botão Google com Adaptação para APK */}
               <button
                 type="button"
@@ -629,22 +664,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </svg>
                 <span>{loading ? 'Conectando...' : 'Conectar com Google'}</span>
               </button>
-
-              {/* Botão Entrar com E-mail ou Usuário */}
-              {onOpenAuth && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundEffects.playClick();
-                    onOpenAuth();
-                  }}
-                  disabled={loading}
-                  className="w-full py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-extrabold text-xs rounded-xl shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-                >
-                  <Mail className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Entrar com Usuário ou E-mail</span>
-                </button>
-              )}
             </div>
           </div>
         )}

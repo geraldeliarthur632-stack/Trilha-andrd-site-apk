@@ -13,6 +13,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
+  signInWithCredential,
   getRedirectResult,
   signInWithEmailAndPassword,
   signInAnonymously,
@@ -30,6 +31,35 @@ import {
   browserLocalPersistence,
 } from 'firebase/auth';
 import { firebaseConfig, isFirebaseConfigured } from './firebaseConfig';
+
+/**
+ * Detecta se a aplicação está rodando encapsulada como APK nativo Android
+ * via Capacitor, Cordova, TWA ou WebView interna no celular/emulador.
+ */
+export function isCapacitorOrNativeApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  // 1. Objeto global injetado pelo Capacitor
+  if ((window as any).Capacitor) return true;
+  // 2. Protocolos típicos de empacotadores híbridos
+  if (
+    window.location.protocol === 'capacitor:' ||
+    window.location.protocol === 'ionic:' ||
+    window.location.protocol === 'file:'
+  ) {
+    return true;
+  }
+  // 3. Identificação de Android WebView / emulador
+  const ua = navigator.userAgent || '';
+  const isAndroid = /android/i.test(ua);
+  const isWebView = /;\s*wv|Version\/[\d.]+/i.test(ua);
+  if (
+    isAndroid &&
+    (isWebView || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export enum OperationType {
   CREATE = 'create',
@@ -247,6 +277,9 @@ export class FirebaseService {
     if (code === 'auth/network-request-failed' || message.includes('auth/network-request-failed')) {
       return 'Verifique sua conexão com a internet e tente novamente.';
     }
+    if (code === 'CAPACITOR_GOOGLE_REDIRECT_BLOCKED' || message.includes('CAPACITOR_GOOGLE_REDIRECT_BLOCKED')) {
+      return 'No aplicativo Android (APK), o Google restringe autenticação direta em janelas internas (WebView) para proteger sua conta. Você pode entrar instantaneamente com 1 toque pelo "Perfil de Estudante" ou pela aba "Usuário e Senha" sem nenhuma restrição ou tela branca!';
+    }
     if (code === 'auth/too-many-requests' || message.includes('auth/too-many-requests')) {
       return 'Muitas tentativas sem sucesso. Por segurança, aguarde alguns instantes antes de tentar novamente.';
     }
@@ -260,7 +293,7 @@ export class FirebaseService {
       return 'Login cancelado. Você pode tentar novamente a qualquer momento.';
     }
     if (code === 'auth/popup-blocked' || message.includes('popup-blocked') || message.includes('disallowed_useragent') || code === 'auth/operation-not-supported-in-this-environment') {
-      return 'No aplicativo Android (APK), o Google pode restringir janelas internas. Você pode entrar instantaneamente usando o "Perfil de Estudante" ou seu "Usuário e Senha" sem nenhuma restrição!';
+      return 'No aplicativo Android (APK), o Google restringe janelas internas. Use a aba "Estudante" para entrar instantaneamente com 1 toque sem senha ou acesse com seu "Usuário e Senha"!';
     }
     if (code === 'auth/account-exists-with-different-credential' || message.includes('account-exists-with-different-credential')) {
       return 'Já existe uma conta com este mesmo e-mail vinculada a outro método. Entre com o método utilizado anteriormente (E-mail ou Google).';
@@ -366,6 +399,9 @@ export class FirebaseService {
   }
 
   static async loginWithGoogleRedirect(): Promise<void> {
+    if (isCapacitorOrNativeApp()) {
+      throw new Error('CAPACITOR_GOOGLE_REDIRECT_BLOCKED');
+    }
     const auth = getFirebaseAuth();
     if (!auth) throw new Error('Firebase Auth não inicializado.');
     const provider = new GoogleAuthProvider();
@@ -374,10 +410,15 @@ export class FirebaseService {
   }
 
   static async checkRedirectResult(): Promise<FirebaseUser | null> {
+    // No Capacitor / APK, não executa getRedirectResult para prevenir requisições e telas brancas
+    if (isCapacitorOrNativeApp()) return null;
     const auth = getFirebaseAuth();
     if (!auth) return null;
     try {
-      const result = await getRedirectResult(auth);
+      const result = await Promise.race([
+        getRedirectResult(auth),
+        new Promise<null>((res) => setTimeout(() => res(null), 2000)),
+      ]);
       return result?.user || null;
     } catch (err) {
       console.warn('Aviso no getRedirectResult:', err);
@@ -420,9 +461,12 @@ export class FirebaseService {
       try {
         // Se já houver um usuário autenticado com e-mail/google, desloga antes de entrar como convidado
         if (auth.currentUser && !auth.currentUser.isAnonymous) {
-          await signOut(auth);
+          await signOut(auth).catch(() => {});
         }
-        const cred = await signInAnonymously(auth);
+        // Tentativa com timeout de 1.5s no Firebase para que no APK ou offline nunca trave
+        const authPromise = signInAnonymously(auth);
+        const timeoutPromise = new Promise<null>((res) => setTimeout(() => res(null), 1500));
+        const cred: any = await Promise.race([authPromise, timeoutPromise]);
         if (cred?.user) {
           return {
             uid: cred.user.uid,
@@ -458,6 +502,34 @@ export class FirebaseService {
       throw new Error('Firebase Auth não inicializado.');
     }
 
+    const isCapacitor = isCapacitorOrNativeApp();
+
+    // 1. Tratamento específico para APK Android no Capacitor
+    if (isCapacitor) {
+      // Se houver o plugin nativo GoogleAuth do Capacitor configurado no Android Studio
+      const nativeGoogleAuth = (window as any).Capacitor?.Plugins?.GoogleAuth;
+      if (nativeGoogleAuth && typeof nativeGoogleAuth.signIn === 'function') {
+        try {
+          const res = await nativeGoogleAuth.signIn();
+          const idToken = res?.authentication?.idToken || res?.idToken;
+          if (idToken) {
+            const credential = GoogleAuthProvider.credential(idToken);
+            const userCred = await signInWithCredential(auth, credential);
+            return userCred.user;
+          }
+        } catch (nativeErr: any) {
+          console.warn('Erro no GoogleAuth nativo do Capacitor:', nativeErr?.message || nativeErr);
+          throw nativeErr;
+        }
+      }
+
+      // CRÍTICO PARA APK: NUNCA chamar signInWithRedirect no WebView do Android!
+      // No Android WebView, signInWithRedirect navega para zeta-phoenix-56shk.firebaseapp.com/__/auth/handler
+      // e, ao concluir, o WebView não consegue retornar para localhost / capacitor://, ficando travado numa tela branca!
+      throw new Error('CAPACITOR_GOOGLE_REDIRECT_BLOCKED');
+    }
+
+    // 2. Ambiente Web padrão (Navegador Chrome, Edge, Safari no PC ou celular)
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
@@ -466,10 +538,15 @@ export class FirebaseService {
       return credential.user;
     } catch (err: any) {
       const code = err?.code || '';
-      // Se popup estiver bloqueado no Android WebView/TWA ou navegador, tenta redirect
+      const errMsg = err?.message || '';
+
+      // Se popup estiver bloqueado no navegador comum e NÃO for WebView do Capacitor:
       if (
-        code === 'auth/popup-blocked' ||
-        code === 'auth/operation-not-supported-in-this-environment'
+        (code === 'auth/popup-blocked' ||
+          code === 'auth/operation-not-supported-in-this-environment' ||
+          errMsg.includes('popup-blocked')) &&
+        !isCapacitor &&
+        window.location.protocol.startsWith('http')
       ) {
         try {
           await signInWithRedirect(auth, provider);
@@ -590,7 +667,12 @@ export class FirebaseService {
       sanitized.lastSyncedAt = new Date().toISOString();
 
       const userRef = doc(db, 'users', userId);
-      await setDoc(userRef, sanitized, { merge: true });
+      // Timeout de segurança de 3 segundos para que nunca trave a interface nem a transição de telas
+      const writePromise = setDoc(userRef, sanitized, { merge: true });
+      const timeoutPromise = new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 3000)
+      );
+      await Promise.race([writePromise, timeoutPromise]);
       return true;
     } catch (err: any) {
       const errMsg = err?.message || String(err);
@@ -598,9 +680,10 @@ export class FirebaseService {
         errMsg.includes('offline') ||
         errMsg.includes('unavailable') ||
         errMsg.includes('network') ||
+        errMsg.includes('timeout') ||
         err?.code === 'unavailable'
       ) {
-        console.warn('Aviso: Firestore offline durante syncProgress, dados salvos localmente:', errMsg);
+        console.warn('Aviso: Firestore offline ou timeout durante syncProgress, dados salvos localmente');
         return false;
       }
       handleFirestoreError(err, OperationType.WRITE, path);
@@ -621,8 +704,10 @@ export class FirebaseService {
     const path = `users/${userId}`;
     try {
       const userRef = doc(db, 'users', userId);
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
+      const readPromise = getDoc(userRef);
+      const timeoutPromise = new Promise<null>((res) => setTimeout(() => res(null), 2500));
+      const snap: any = await Promise.race([readPromise, timeoutPromise]);
+      if (snap && typeof snap.exists === 'function' && snap.exists()) {
         return snap.data();
       }
       return null;
@@ -632,9 +717,10 @@ export class FirebaseService {
         errMsg.includes('offline') ||
         errMsg.includes('unavailable') ||
         errMsg.includes('network') ||
+        errMsg.includes('timeout') ||
         err?.code === 'unavailable'
       ) {
-        console.warn('Aviso: Firestore offline em restoreProgress, utilizando dados locais:', errMsg);
+        console.warn('Aviso: Firestore offline ou timeout em restoreProgress, utilizando dados locais');
         return null;
       }
       handleFirestoreError(err, OperationType.GET, path);

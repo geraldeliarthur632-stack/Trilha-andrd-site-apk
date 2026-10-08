@@ -215,7 +215,9 @@ export function App() {
               totalPoints: mergedTotalPoints,
               completedChallenges: mergedChallenges,
               totalCorrectAnswers: mergedCorrect,
-              customSubjects: cloudData?.customSubjects || prev.customSubjects,
+              customSubjects: Array.isArray(cloudData?.customSubjects)
+                ? cloudData.customSubjects
+                : prev.customSubjects,
               hasConfiguredSubjects: cloudData?.hasConfiguredSubjects ?? prev.hasConfiguredSubjects,
               lastSyncedAt: new Date().toISOString(),
               isFirstTime: false,
