@@ -31,6 +31,7 @@ import {
   browserLocalPersistence,
 } from 'firebase/auth';
 import { firebaseConfig, isFirebaseConfigured } from './firebaseConfig';
+import { Capacitor } from '@capacitor/core';
 
 /**
  * Detecta se a aplicação está rodando encapsulada como APK nativo Android
@@ -38,9 +39,12 @@ import { firebaseConfig, isFirebaseConfigured } from './firebaseConfig';
  */
 export function isCapacitorOrNativeApp(): boolean {
   if (typeof window === 'undefined') return false;
-  // 1. Objeto global injetado pelo Capacitor
+  try {
+    if (Capacitor.isNativePlatform()) return true;
+    if (Capacitor.getPlatform() === 'android' || Capacitor.getPlatform() === 'ios') return true;
+  } catch {}
+  if ((window as any).Capacitor?.isNativePlatform?.()) return true;
   if ((window as any).Capacitor) return true;
-  // 2. Protocolos típicos de empacotadores híbridos
   if (
     window.location.protocol === 'capacitor:' ||
     window.location.protocol === 'ionic:' ||
@@ -48,7 +52,6 @@ export function isCapacitorOrNativeApp(): boolean {
   ) {
     return true;
   }
-  // 3. Identificação de Android WebView / emulador
   const ua = navigator.userAgent || '';
   const isAndroid = /android/i.test(ua);
   const isWebView = /;\s*wv|Version\/[\d.]+/i.test(ua);

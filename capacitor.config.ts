@@ -23,17 +23,12 @@ const config: CapacitorConfig = {
   bundledWebRuntime: false,
   server: {
     androidScheme: 'https',
-    cleartext: true,
-    allowNavigation: [
-      '*.firebaseapp.com',
-      '*.googleapis.com',
-      '*.google.com',
-    ],
+    cleartext: false,
   },
   android: {
-    allowMixedContent: true,
+    allowMixedContent: false,
     captureInput: true,
-    webContentsDebuggingEnabled: true,
+    webContentsDebuggingEnabled: false,
   },
 };
 

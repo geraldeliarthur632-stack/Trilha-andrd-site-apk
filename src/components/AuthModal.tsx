@@ -557,6 +557,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setSuccessMessage('Entrou no Modo Convidado com sucesso!');
       setTimeout(() => {
         onClose();
+        onLoginSuccess?.();
       }, 500);
     } catch {
       const fallbackUid = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -576,6 +577,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setSuccessMessage('Entrou no Modo Convidado com sucesso!');
       setTimeout(() => {
         onClose();
+        onLoginSuccess?.();
       }, 500);
     } finally {
       setLoading(false);

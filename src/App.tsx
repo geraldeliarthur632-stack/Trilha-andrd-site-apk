@@ -343,12 +343,14 @@ export function App() {
   const [isErrorFeedbackOpen, setIsErrorFeedbackOpen] = useState(false);
   const [errorFeedbackTopic, setErrorFeedbackTopic] = useState<string | undefined>(undefined);
 
-  // Pós-login com e-mail/senha ou convidado: abre a tela das 3 matérias (Biologia, Física, Química) e depois a de explicação
+  // Pós-login com e-mail/senha ou convidado: se for primeira vez, abre matérias da escola; senão, entra direto no mapa
   const handleAuthLoginSuccess = () => {
     setIsAuthModalOpen(false);
     setAuthModalNotice(undefined);
-    setShowTutorialAfterSubjects(true);
-    setIsSubjectCustomizationOpen(true);
+    if (!user.hasConfiguredSubjects) {
+      setShowTutorialAfterSubjects(true);
+      setIsSubjectCustomizationOpen(true);
+    }
   };
 
   // Fluxo de logout: sincroniza dados, encerra sessão do Firebase e direciona diretamente à tela de login
