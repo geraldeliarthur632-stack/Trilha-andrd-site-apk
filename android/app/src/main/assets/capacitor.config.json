@@ -2,7 +2,6 @@
 	"appId": "com.trilhadosaber.app",
 	"appName": "Trilha do Saber",
 	"webDir": "dist",
-	"bundledWebRuntime": false,
 	"server": {
 		"androidScheme": "https",
 		"cleartext": false

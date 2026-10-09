@@ -1,26 +1,9 @@
-export interface CapacitorConfig {
-  appId: string;
-  appName: string;
-  webDir: string;
-  bundledWebRuntime?: boolean;
-  server?: {
-    androidScheme?: string;
-    cleartext?: boolean;
-    url?: string;
-    allowNavigation?: string[];
-  };
-  android?: {
-    allowMixedContent?: boolean;
-    captureInput?: boolean;
-    webContentsDebuggingEnabled?: boolean;
-  };
-}
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.trilhadosaber.app',
   appName: 'Trilha do Saber',
   webDir: 'dist',
-  bundledWebRuntime: false,
   server: {
     androidScheme: 'https',
     cleartext: false,

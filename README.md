@@ -1,187 +1,177 @@
-# 📚 Trilha do Saber — Plataforma Educacional 100% Web
+# 📚 Trilha do Saber — Plataforma Educacional (Web & Android)
 
 > **Plataforma Educacional Completa, Interativa e Gamificada alinhada à BNCC**  
-> *"Aprenda. Pratique. Evolua — Diretamente pelo Navegador em Qualquer Dispositivo."*
+> *"Aprenda. Pratique. Evolua — Disponível na Web (PWA / GitHub Pages) e em Aplicativo Nativo Android (APK / Google Play Store)."*
 
-O **Trilha do Saber** é uma aplicação web moderna, responsiva e estável, desenvolvida com **React 19, TypeScript, Vite 6 e Tailwind CSS v4**. Foi arquitetada para funcionar como um site completo e como **Progressive Web App (PWA)**, acessível diretamente pelo navegador em smartphones (Android e iPhone/iOS), tablets e computadores, sem necessidade de download em lojas de aplicativos ou dependência de ferramentas nativas como Android Studio, Gradle ou arquivos APK.
-
-O projeto foi preparado e otimizado para **publicação estática direta no GitHub Pages**, suportando URLs de subpasta (ex: `https://usuario.github.io/nome-do-repositorio/`) através de caminhos relativos portáteis (`base: './'`), proteção contra 404 em rotas com `404.html` e desativação do Jekyll com `.nojekyll`.
+O **Trilha do Saber** é uma plataforma educacional desenvolvida com **React 19, TypeScript, Vite 6, Tailwind CSS v4 e Capacitor 8**. Foi projetada com uma arquitetura híbrida de alto desempenho que permite tanto a execução como **aplicação web estática e PWA**, quanto a compilação como **aplicativo nativo Android (APK / AAB)** pronto para distribuição e publicação na Google Play Store.
 
 ---
 
 ## 🌟 1. Principais Recursos Educacionais
 
-Todas as funcionalidades pedagógicas e interativas estão preservadas e funcionam nativamente no navegador:
-
-- 🗺️ **Jornada de Aprendizagem BNCC**: Trilhas organizadas por matéria (Matemática, Português, Ciências, História, Geografia, etc.) do 1º ao 9º ano e Ensino Médio.
-- 📝 **Simulados & Exercícios**: Questões com correção imediata, explicações pedagógicas, cálculo de acertos e recompensas de XP.
-- 📸 **Criador de Provas por Foto**: Leitura de imagens com câmera ou upload de arquivo (`<input type="file">`), correção de gabarito e estimativa de nota.
-- 🤖 **Professor & Tutor IA**: Explicações didáticas, tira-dúvidas passo a passo e tradutor de idiomas com pronúncia por voz (Web Speech API) e fallbacks locais inteligentes para funcionamento 100% offline ou estático.
-- 📄 **Caderno Digital de Resumos em PDF**: Visualização e download de resumos e fichas de estudo formatadas para impressão usando `jspdf`.
-- ♟️ **Xadrez Escolar Completo**: Tabuleiro interativo (`chess.js`), partidas contra IA (diferentes níveis), desafios táticos e aulas em vídeo com áudio em segundo plano (MediaSession API).
-- 🎮 **Jogos Educativos & Desafios**: Caça-palavras, quiz rápido, jogo da memória e tabuada interativa.
-- 🏆 **Gamificação & Conquistas**: Ofensiva diária de estudos (streak), medalhas desbloqueáveis, níveis de experiência (XP) e efeitos visuais com confetes (`canvas-confetti`).
-- 🎨 **Aparência de Aplicativo Moderno**: Suporte a modo claro (Light) e modo escuro (Dark), navegação adaptativa para toque no celular e teclado/mouse no desktop.
-- 📱 **Instalação como PWA**: Ícones em alta resolução, manifesto web (`manifest.json`) e Service Worker (`sw.js`) para carregamento instantâneo e offline.
+- 🗺️ **Jornada de Aprendizagem BNCC**: Trilhas curriculares do 1º ao 9º ano do Ensino Fundamental e Ensino Médio/ENEM.
+- 📝 **Simulados & Exercícios**: Questões com correção automática imediata, gabarito explicado e pontuação de XP.
+- 📸 **Criador de Provas por Foto**: Digitalização com foto da prova via câmera ou arquivo, leitura e correção de gabaritos.
+- 🤖 **Professor & Tutor IA**: Explicações didáticas socráticas passo a passo com síntese de áudio e fallbacks pedagógicos.
+- 📄 **Caderno Digital de Resumos em PDF**: Download e impressão direta de apostilas geradas via `jspdf`.
+- ♟️ **Xadrez Escolar Completo**: Tabuleiro interativo (`chess.js`), partidas contra robôs com vários níveis e quebra-cabeças táticos.
+- 🎮 **Jogos & Desafios**: Caça-palavras, jogo da memória, tabuada relâmpago e palavras cruzadas.
+- 🏆 **Gamificação & Conquistas**: Ofensiva diária de estudos, medalhas desbloqueáveis, níveis de experiência e ranking.
+- 🎨 **Interface Moderna**: Suporte completo a Modo Claro e Modo Escuro, design responsivo para telas pequenas e grandes.
+- 📱 **Experiência Nativa Android**: Tratamento do botão Voltar do sistema, SplashScreen oficial, suporte offline e desempenho otimizado.
 
 ---
 
-## ⚙️ 2. Arquitetura 100% Web (Livre de Dependências Android)
+## ⚙️ 2. Arquitetura Multiplataforma
 
-O projeto é puramente web e **não depende de**:
-- ❌ Android Studio / IntelliJ IDEA
-- ❌ Gradle / Maven
-- ❌ APK / AAB
-- ❌ AndroidManifest.xml
-- ❌ Kotlin / Java Android
-- ❌ Activities, Fragments ou permissões nativas de dispositivo
+O projeto compartilha a mesma base de código para Web e Android:
 
-### Como as funções funcionam no navegador:
-| Recurso | Solução Web Adotada |
-| :--- | :--- |
-| **Persistência de Dados** | `localStorage` resiliente + sincronização opcional com Firebase Firestore |
-| **Áudio e Efeitos Sonoros** | Síntese de som com **Web Audio API** (sem bloqueio de autoplay) |
-| **Voz e Pronúncia** | **Web Speech API** nativa dos navegadores |
-| **Upload de Fotos e Provas** | Entrada padrão HTML5 (`<input type="file" accept="image/*">`) e arrastar-e-soltar |
-| **Geração de Documentos** | Biblioteca `jspdf` para compilar e baixar PDFs no próprio navegador |
-| **Modo Offline & Cache** | **Service Worker** (`public/sw.js`) com cache inteligente e URLs relativas |
-| **Compatibilidade de Telas** | Layout totalmente fluido em Tailwind CSS para celular, tablet e desktop |
+| Recurso | Versão Web / PWA | Versão Android (Capacitor) |
+| :--- | :--- | :--- |
+| **Identificador / ID** | Trilha do Saber (`id: /?source=pwa`) | `com.trilhadosaber.app` |
+| **Ponto de Distribuição** | GitHub Pages / Vercel / PWA | Google Play Store (`.aab`) / APK (`.apk`) |
+| **Persistência de Dados** | `localStorage` + Firebase Firestore | `localStorage` + Firebase Firestore |
+| **Botão Voltar** | Navegação padrão do navegador | Fechamento inteligente de modais e retorno à tela inicial |
+| **Câmera & Mídia** | HTML5 File Input / MediaStream | HTML5 + Permissões Android integradas |
+| **Modo Offline** | Service Worker (`sw.js`) | Assets compilados em `assets/public/` |
 
 ---
 
-## 💻 3. Como Rodar o Projeto Localmente
+## 💻 3. Desenvolvimento Local
 
 ### Pré-requisitos
-- **Node.js**: Versão 18, 20 ou superior
-- **npm** (ou yarn/pnpm)
+- **Node.js**: Versão 20 LTS (ou 18+)
+- **npm**: Versão 10+
+- **JDK (para Android)**: Java 21 (Temurin ou OpenJDK)
+- **Android Studio** (opcional, para emulador e depuração visual)
 
-### Passo a Passo:
+### Instalação e Execução:
 ```bash
-# 1. Clonar o repositório
-git clone https://github.com/seu-usuario/trilha-do-saber.git
-cd trilha-do-saber
+# 1. Instalar dependências em sincronia com o package-lock.json
+npm ci
 
-# 2. Instalar as dependências
-npm install
-
-# 3. Iniciar o servidor de desenvolvimento local
+# 2. Executar o servidor de desenvolvimento local
 npm run dev
 ```
 
-Abra o seu navegador no endereço: **`http://localhost:3000`**
+Acesse a aplicação no navegador em **`http://localhost:3000`**.
 
 ---
 
-## 📦 4. Como Gerar a Versão Web Final (Build Estático)
+## 📦 4. Scripts e Comandos de Compilação
 
-Para gerar os arquivos estáticos otimizados prontos para publicação em qualquer servidor web ou GitHub Pages:
+| Comando | Descrição |
+| :--- | :--- |
+| `npm run dev` | Inicia o servidor local de desenvolvimento. |
+| `npm run lint` | Executa a verificação estrita de tipagem TypeScript (`tsc --noEmit`). |
+| `npm run build:pages` | Compila os assets estáticos web para a pasta `dist/` (usado pelo GitHub Pages e Capacitor). |
+| `npm run build:android` | Compila o build web e executa a sincronização com o projeto nativo Android (`npx cap sync android`). |
+| `npm run build` | Compila os assets web e gera o bundle para servidor Node.js opcional (`dist/server.cjs`). |
+| `npm run cap:sync` | Sincroniza a pasta `dist/` e plugins com o diretório nativo `android/`. |
 
+---
+
+## 🤖 5. Compilação do Aplicativo Android (APK e AAB)
+
+O projeto nativo está localizado no diretório **`android/`**.
+
+### Passo 1: Compilar os assets web e sincronizar
 ```bash
 npm run build:pages
+npx cap sync android
 ```
 
-Os arquivos compilados estarão na pasta **`dist/`**. Esta pasta é 100% estática (`index.html`, `404.html`, `manifest.json`, `sw.js`, assets JavaScript e CSS) e pode ser hospedada em qualquer lugar.
+### Passo 2: Gerar o APK de Teste (Debug)
+```bash
+cd android
+./gradlew assembleDebug
+```
+O arquivo APK será gerado em:
+`android/app/build/outputs/apk/debug/app-debug.apk`
 
-*(O comando alternativo `npm run build` também gera o build web junto ao bundle do servidor Node opcional).*
-
----
-
-## 🚀 5. Publicação no GitHub Pages Passo a Passo
-
-O projeto já inclui toda a infraestrutura necessária para o GitHub Pages:
-- `base: './'` no `vite.config.ts` (permite rodar em subpastas de repositórios do GitHub);
-- `public/.nojekyll` (impede o GitHub de ignorar arquivos estáticos essenciais);
-- `public/404.html` (permite que o recarregamento de páginas funcione no navegador sem erro de página não encontrada);
-- `.github/workflows/deploy.yml` (automação completa via GitHub Actions).
-
-### Método 1: Publicação Automática via GitHub Actions (Recomendado)
-
-1. Envie o código do projeto para o seu repositório no GitHub:
-   ```bash
-   git add .
-   git commit -m "feat: preparar Trilha do Saber para GitHub Pages"
-   git push origin main
-   ```
-2. No seu repositório no GitHub, acesse a aba **Settings** (Configurações).
-3. No menu lateral esquerdo, clique em **Pages**.
-4. Em **Build and deployment** > **Source**, selecione **GitHub Actions**.
-5. O fluxo de automação configurado em `.github/workflows/deploy.yml` será iniciado automaticamente a cada `git push` na branch principal.
-6. Em cerca de 1 a 2 minutos, o GitHub Pages fornecerá o link do seu site no topo da página:
-   `https://seu-usuario.github.io/trilha-do-saber/`
+### Passo 3: Gerar o App Bundle para a Google Play Store (Release AAB)
+```bash
+cd android
+./gradlew bundleRelease
+```
+O arquivo de pacote será gerado em:
+`android/app/build/outputs/bundle/release/app-release.aab`
 
 ---
 
-### Método 2: Publicação Manual via Branch `gh-pages`
+## 🔐 6. Configuração da Assinatura de Release (Google Play Store)
 
-Se preferir publicar gerando o build manualmente na sua máquina:
+Para gerar pacotes de release assinados automaticamente pelo GitHub Actions ou localmente, é necessário configurar um arquivo de chaves (`keystore`).
 
-1. Gere a pasta `dist/`:
+### Como criar a chave de assinatura (caso ainda não possua):
+```bash
+keytool -genkey -v -keystore release.keystore -alias trilha-alias -keyalg RSA -keysize 2048 -validity 10000
+```
+
+### Como configurar os GitHub Secrets no repositório:
+1. Converta seu arquivo `release.keystore` para base64:
    ```bash
-   npm run build:pages
+   base64 -w 0 release.keystore > keystore_base64.txt
    ```
-2. Instale o utilitário `gh-pages` como dependência de desenvolvimento (se desejar):
-   ```bash
-   npm install --save-dev gh-pages
-   ```
-3. Adicione o script `"deploy": "gh-pages -d dist"` no seu `package.json`.
-4. Execute o deploy:
-   ```bash
-   npm run deploy
-   ```
-5. No GitHub, em **Settings** > **Pages**, configure a branch de publicação como `gh-pages` e pasta `/ (root)`.
+2. No seu repositório no GitHub, vá em **Settings** > **Secrets and variables** > **Actions** > **New repository secret**.
+3. Crie os 4 segredos a seguir:
+   - `ANDROID_KEYSTORE_BASE64`: Cole o conteúdo gerado em base64.
+   - `KEYSTORE_PASSWORD`: A senha que você definiu para o arquivo keystore.
+   - `KEY_ALIAS`: O alias da sua chave (ex: `trilha-alias`).
+   - `KEY_PASSWORD`: A senha da chave (frequentemente a mesma da keystore).
+
+> **Aviso Importante**: Se esses segredos não estiverem configurados no GitHub, o workflow compilará o AAB no modo padrão não assinado (*unsigned*). Nunca envie arquivos `.keystore` com senhas diretamente para o repositório público.
 
 ---
 
-## 📱 6. Como Acessar e Instalar no Celular
+## 🚀 7. Automação com GitHub Actions
 
-O Trilha do Saber se adapta com facilidade a qualquer formato de tela:
+O repositório possui dois fluxos de trabalho automatizados:
 
-### No Android (Google Chrome):
-1. Acesse o link do site publicado pelo navegador.
-2. Toque nos três pontinhos no canto superior direito.
-3. Selecione **"Instalar aplicativo"** ou **"Adicionar à tela inicial"**.
-4. O ícone da Trilha do Saber aparecerá junto aos seus aplicativos, abrindo em tela cheia sem barra de endereço.
+1. **Deploy no GitHub Pages** (`.github/workflows/deploy.yml`):
+   - Compila os arquivos estáticos (`npm run build:pages`).
+   - Publica o site automaticamente no GitHub Pages a cada push na branch principal.
 
-### No iPhone / iPad (Safari):
-1. Acesse o site pelo navegador **Safari**.
-2. Toque no botão de **Compartilhar** (quadrado com uma seta para cima na barra inferior).
-3. Role as opções e selecione **"Adicionar à Tela de Início"**.
-4. Toque em **"Adicionar"** no canto superior direito.
+2. **Compilação Android APK & AAB** (`.github/workflows/android-build.yml`):
+   - Executa `npm ci` e validação TypeScript (`npm run lint`).
+   - Gera o build web e sincroniza o Capacitor (`npx cap sync android`).
+   - Valida que `assets/public/index.html` e `capacitor.config.json` foram devidamente copiados.
+   - Compila o **Debug APK** e inspeciona se o pacote contém os arquivos web obrigatórios.
+   - Compila o **Release AAB** (com assinatura caso os secrets estejam preenchidos).
+   - Exporta os artefatos `app-debug` e `app-release-bundle`.
 
 ---
 
-## 📂 7. Estrutura Limpa de Pastas
+## 📂 8. Estrutura do Repositório
 
 ```text
 /
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml            # Automação de deploy para GitHub Pages
-├── public/                       # Arquivos estáticos públicos
-│   ├── .nojekyll                 # Desativa Jekyll no GitHub Pages
-│   ├── 404.html                  # Fallback SPA para navegação no GitHub Pages
-│   ├── app-logo.png              # Logotipo em alta definição
-│   ├── icon.svg                  # Ícone vetorial da aplicação
-│   ├── manifest.json             # Manifesto PWA com URLs relativas
-│   ├── sw.js                     # Service Worker para cache e offline
-│   └── firebase-messaging-sw.js  # Service Worker para notificações FCM
-├── src/
-│   ├── components/               # Telas e componentes interativos (Modais, Header, Navegação)
-│   │   └── modes/                # Modos de estudo (Jornada, Simulado, Provas por Foto, Xadrez, etc.)
-│   ├── data/                     # Dados curriculares BNCC, questões e lições de xadrez
-│   ├── hooks/                    # Custom Hooks React
-│   ├── services/                 # Serviços desacoplados (Áudio, IA, Notificações, PWA)
-│   ├── types/                    # Tipagens TypeScript completas
-│   ├── App.tsx                   # Componente central da aplicação
-│   ├── main.tsx                  # Ponto de entrada React 19
-│   └── index.css                 # Estilos globais Tailwind CSS v4
-├── index.html                    # Ponto de entrada HTML com metadados responsivos e PWA
-├── package.json                  # Dependências e scripts de execução/build
-├── tsconfig.json                 # Configurações do TypeScript
-├── vite.config.ts                # Configuração do Vite com base: './'
-└── README.md                     # Documentação oficial do projeto
+│       ├── deploy.yml            # Publicação automática no GitHub Pages
+│       └── android-build.yml     # Compilação e validação do APK e AAB Android
+├── android/                      # Projeto nativo Android (Gradle + Capacitor)
+│   ├── app/
+│   │   ├── build.gradle          # Configurações de compilação, SDK e assinatura de release
+│   │   ├── google-services.json  # Configuração do Firebase Android
+│   │   └── src/main/
+│   │       ├── AndroidManifest.xml
+│   │       ├── assets/           # Destino dos assets web compilados e capacitor.config.json
+│   │       └── res/              # Ícones adaptativos (mipmap) e telas de abertura
+│   ├── build.gradle              # Configurações raiz do Gradle
+│   └── variables.gradle          # Definições de SDK (compileSdk 36, targetSdk 36, minSdk 24)
+├── capacitor.config.ts           # Configuração oficial única do Capacitor (@capacitor/cli)
+├── public/                       # Arquivos estáticos públicos e Service Worker
+├── src/                          # Código fonte da aplicação React + TypeScript
+│   ├── components/               # Componentes visuais, modais e modos interativos
+│   ├── services/                 # Serviços de banco de dados, áudio, IA e tarefas
+│   └── App.tsx                   # Componente raiz com roteamento e controle de botão Voltar
+├── package.json                  # Dependências e scripts npm
+├── package-lock.json             # Árvore de dependências determinística e sincronizada
+├── tsconfig.json                 # Configurações do compilador TypeScript
+└── vite.config.ts                # Configurações do Vite (caminhos relativos e plugins)
 ```
 
 ---
 
-**Trilha do Saber** — Educação transformadora, acessível a qualquer momento e em qualquer dispositivo! 🎓✨
+**Trilha do Saber** — Educação transformadora, acessível a qualquer momento na web e no celular! 🎓✨

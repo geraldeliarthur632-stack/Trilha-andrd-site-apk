@@ -29,11 +29,21 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Run TypeScript typecheck
+        run: npm run lint
+
       - name: Build web assets
         run: npm run build:pages
 
       - name: Sync Capacitor Android
         run: npx cap sync android
+
+      - name: Verify Web Assets Copied to Android Project
+        run: |
+          echo "Verificando se os arquivos web essenciais foram sincronizados para o Android..."
+          test -f android/app/src/main/assets/public/index.html || { echo "ERRO CRÍTICO: android/app/src/main/assets/public/index.html não foi encontrado!"; exit 1; }
+          test -f android/app/src/main/assets/capacitor.config.json || { echo "ERRO CRÍTICO: android/app/src/main/assets/capacitor.config.json não foi gerado!"; exit 1; }
+          echo "✓ Assets web e configuração do Capacitor verificados com sucesso."
 
       - name: Make Gradle Wrapper executable
         run: chmod +x android/gradlew
@@ -43,21 +53,79 @@ jobs:
           cd android
           ./gradlew assembleDebug --stacktrace
 
+      - name: Verify Debug APK Output & Contents
+        run: |
+          DEBUG_APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$DEBUG_APK" ]; then
+            echo "ERRO CRÍTICO: O arquivo $DEBUG_APK não foi gerado!"
+            exit 1
+          fi
+          echo "Debug APK gerado com sucesso: $(ls -lh $DEBUG_APK)"
+
+          # Inspecionar conteúdo do APK gerado usando unzip -l
+          echo "Verificando se o APK contém os assets web necessários..."
+          unzip -l "$DEBUG_APK" | grep "assets/public/index.html" || {
+            echo "ERRO: O APK compilado não contém assets/public/index.html!"
+            exit 1
+          }
+          unzip -l "$DEBUG_APK" | grep "assets/capacitor.config.json" || {
+            echo "ERRO: O APK compilado não contém assets/capacitor.config.json!"
+            exit 1
+          }
+          echo "✓ APK validado com assets/public/index.html e capacitor.config.json presentes."
+
+      - name: Setup Keystore for Release Signing (se configurado via GitHub Secrets)
+        id: setup_signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "Configurando keystore a partir do secret ANDROID_KEYSTORE_BASE64..."
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+            echo "RELEASE_STORE_FILE=release.keystore" >> $GITHUB_ENV
+            echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD" >> $GITHUB_ENV
+            echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+            echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
+            echo "has_signing=true" >> $GITHUB_OUTPUT
+            echo "✓ Keystore de release configurado para assinatura do AAB."
+          else
+            echo "AVISO: Secrets de assinatura (ANDROID_KEYSTORE_BASE64, etc.) não configurados."
+            echo "O AAB será compilado em modo unaligned/unsigned para inspeção."
+            echo "has_signing=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build Release AAB (App Bundle para Play Store)
         run: |
           cd android
           ./gradlew bundleRelease --stacktrace
+
+      - name: Verify Release AAB Output
+        run: |
+          RELEASE_AAB="android/app/build/outputs/bundle/release/app-release.aab"
+          if [ ! -f "$RELEASE_AAB" ]; then
+            echo "ERRO CRÍTICO: O arquivo $RELEASE_AAB não foi gerado!"
+            exit 1
+          fi
+          echo "Release AAB gerado com sucesso: $(ls -lh $RELEASE_AAB)"
+          if [ "${{ steps.setup_signing.outputs.has_signing }}" = "true" ]; then
+            echo "✓ AAB de Release assinado com sucesso usando os secrets configurados."
+          else
+            echo "ℹ️ AAB gerado, porém NÃO assinado (configure os secrets no repositório para assinatura automática)."
+          fi
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: warn
+          if-no-files-found: error
 
       - name: Upload Release AAB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-bundle
           path: android/app/build/outputs/bundle/release/app-release.aab
-          if-no-files-found: warn
+          if-no-files-found: error
